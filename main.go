@@ -643,58 +643,6 @@ func (cli *ImapSyncCLI) handleDevSection() {
 func (cli *ImapSyncCLI) waitForEnter() {
 	fmt.Printf("\n%s%sPress Enter to continue...%s", ColorBold, ColorWhite, ColorReset)
 	bufio.NewScanner(os.Stdin).Scan()
-} ColorCyan, ColorBold, ColorReset)
-	fmt.Printf("%s%s3 - Developer Github: %s%shttps://github.com/erencanucarr%s\n", ColorGreen, ColorBold, ColorCyan, ColorBold, ColorReset)
-	fmt.Printf("%s%sb - Ana Menü%s\n", ColorYellow, ColorBold, ColorReset)
-}
-
-// handleDevSection handles developer information section
-func (cli *ImapSyncCLI) handleDevSection() {
-	cli.printDevASCII()
-
-	scanner := bufio.NewScanner(os.Stdin)
-	for {
-		cli.showDevMenu()
-
-		fmt.Printf("\n%s%sSeçiminiz: %s", ColorBold, ColorWhite, ColorReset)
-		if !scanner.Scan() {
-			break
-		}
-
-		choice := strings.TrimSpace(scanner.Text())
-
-		switch choice {
-		case "1":
-			fmt.Printf("\n%s%s📧 Developer Mail:%s\n", ColorMagenta, ColorBold, ColorReset)
-			fmt.Printf("%s%s✉️  dev@eren.gg%s\n", ColorGreen, ColorBold, ColorReset)
-			fmt.Printf("%s%sBu mail adresini kopyalayarak benimle iletişime geçebilirsiniz.%s\n", ColorCyan, ColorBold, ColorReset)
-			cli.waitForEnter()
-
-		case "2":
-			fmt.Printf("\n%s%s💼 Developer LinkedIn:%s\n", ColorMagenta, ColorBold, ColorReset)
-			fmt.Printf("%s%s🔗 https://www.linkedin.com/in/erencanucarr/%s\n", ColorGreen, ColorBold, ColorReset)
-			fmt.Printf("%s%sProfesyonel ağım ve iş deneyimlerim için LinkedIn profilimi ziyaret edebilirsiniz.%s\n", ColorCyan, ColorBold, ColorReset)
-			cli.waitForEnter()
-
-		case "3":
-			fmt.Printf("\n%s%s💻 Developer Github:%s\n", ColorMagenta, ColorBold, ColorReset)
-			fmt.Printf("%s%s🐙 https://github.com/erencanucarr%s\n", ColorGreen, ColorBold, ColorReset)
-			fmt.Printf("%s%sAçık kaynak projelerim ve kod örneklerim için GitHub profilimi inceleyebilirsiniz.%s\n", ColorCyan, ColorBold, ColorReset)
-			cli.waitForEnter()
-
-		case "b", "back", "geri", "ana":
-			return
-
-		default:
-			fmt.Printf("%s%sGeçersiz seçim. Lütfen 1, 2, 3 veya b girin.%s\n", ColorYellow, ColorBold, ColorReset)
-		}
-	}
-}
-
-// waitForEnter waits for user to press Enter
-func (cli *ImapSyncCLI) waitForEnter() {
-	fmt.Printf("\n%s%sDevam etmek için Enter'a basın...%s", ColorBold, ColorWhite, ColorReset)
-	bufio.NewScanner(os.Stdin).Scan()
 }
 
 // run starts the main application loop
