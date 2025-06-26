@@ -7,6 +7,13 @@ Professional command-line interface for seamless email migration using IMAPSYNC.
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 ![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)
 
+
+![Termius_OJbvTQ5Po1](https://github.com/user-attachments/assets/537291b3-1467-4e5f-8947-c3b4350669bc)
+![Termius_gGlvCQmLz1](https://github.com/user-attachments/assets/8f0c368c-be9e-4fad-ad1a-9a0d2178b010)
+
+
+
+
 ## ✨ Features
 
 - 🎨 **Beautiful ASCII Interface** - Eye-catching terminal UI with colored output
