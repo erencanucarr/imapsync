@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# Automated imapsync installation for Arch Linux / Manjaro
+# Run with root privileges (sudo) or as root.
+set -euo pipefail
+# Log everything
+exec > >(tee -a /var/log/imapsync-install.log) 2>&1
+
+# Colors
+bold(){ printf "\033[1m%s\033[0m\n" "$1"; }
+
+
+# Helper function
+exists() { command -v "$1" >/dev/null 2>&1; }
+
+bold "[0/7] Refreshing keyring & full system upgrade …"
+pacman -Sy --noconfirm archlinux-keyring
+pacman -Syu --noconfirm
+
+bold "[1/7] Installing core build tools & common deps …"
+pacman -S --needed --noconfirm base-devel git make lsb-release cpanminus wget perl
+
+bold "[2/7] Installing required Perl packages from official repos …"
+pacman -S --needed --noconfirm \
+    perl-cgi \
+    perl-crypt-openssl-rsa \
+    perl-data-uniqid \
+    perl-digest-hmac \
+    perl-dist-checkconflicts \
+    perl-file-copy-recursive \
+    perl-io-socket-inet6 \
+    perl-io-socket-ssl \
+    perl-io-tee \
+    perl-json \
+    perl-html-parser \
+    perl-libwww \
+    perl-module-implementation \
+    perl-module-runtime \
+    perl-module-scandeps \
+    perl-net-ssleay \
+    perl-net-dns \
+    perl-package-stash \
+    perl-package-stash-xs \
+    perl-parse-recdescent \
+    perl-readonly \
+    perl-regexp-common \
+    perl-term-readkey \
+    perl-test-fatal \
+    perl-test-mockobject \
+    perl-test-pod \
+    perl-test-requires \
+    perl-test-nowarnings \
+    perl-test-deep \
+    perl-try-tiny \
+    perl-uri \
+    perl-file-tail
+
+bold "[3/7] Installing additional Perl modules via cpanminus … (may take time)"
+cpanm -n Mail::IMAPClient Unicode::String Sys::MemInfo Encode::IMAPUTF7 Authen::NTLM JSON::WebToken JSON::WebToken::Crypt::RSA Test::Mock::Guard Test::Warn PAR::Packer Proc::ProcessTable
+
+bold "[4/7] Ensuring AUR helper (yay/paru) …"
+if ! exists yay && ! exists paru; then
+  tempdir=$(mktemp -d)
+  git -C "$tempdir" clone https://aur.archlinux.org/yay.git || git -C "$tempdir" clone https://aur.archlinux.org/paru.git
+  helper=$(ls "$tempdir")
+  (cd "$tempdir/$helper" && makepkg -si --noconfirm)
+  rm -rf "$tempdir"
+fi
+helper_cmd="$(command -v yay || command -v paru)"
+
+bold "[5/7] Installing imapsync (repo or AUR) …"
+if pacman -Si imapsync >/dev/null 2>&1; then
+  pacman -S --noconfirm imapsync
+else
+  "$helper_cmd" -S --noconfirm imapsync
+fi
+
+bold "[6/7] Cleaning orphan packages (optional) …"
+if pacman -Qtdq >/dev/null 2>&1; then
+  pacman -Rns --noconfirm $(pacman -Qtdq)
+fi
+
+bold "[7/7] Verifying installation …"
+imapsync --version || true
+bold "Run 'imapsync --testslive' to perform a live test."
+
+if ! exists yay; then
+  echo "yay AUR helper not found, installing …"
+  tempdir=$(mktemp -d)
+  git -C "$tempdir" clone https://aur.archlinux.org/yay.git
+  (cd "$tempdir/yay" && makepkg -si --noconfirm)
+  rm -rf "$tempdir"
+fi
+
+yay -S --noconfirm imapsync
+
+echo "imapsync installation completed successfully. Test with: imapsync --testslive"

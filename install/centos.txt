@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Automated imapsync installation for CentOS/RHEL 7/8/9 and compatible (AlmaLinux, Rocky)
+set -euo pipefail
+exec > >(tee -a /var/log/imapsync-install.log) 2>&1
+bold(){ printf "\033[1m%s\033[0m\n" "$1"; }
+
+bold "[1/6] Updating system & enabling EPEL …"
+yum -y update
+if ! yum repolist | grep -q epel; then
+  yum -y install epel-release
+fi
+
+bold "[2/6] Installing base tools & dependencies …"
+yum -y install make wget curl perl-App-cpanminus time
+
+bold "[3/6] Installing required Perl packages from repos …"
+yum -y install \
+  perl-Authen-NTLM \
+  perl-Class-Load \
+  perl-Crypt-OpenSSL-RSA \
+  perl-Data-Uniqid \
+  perl-Digest-HMAC \
+  perl-Encode-IMAPUTF7 \
+  perl-File-Copy-Recursive \
+  perl-File-Tail \
+  perl-IO-Compress \
+  perl-IO-Socket-INET6 \
+  perl-IO-Socket-SSL \
+  perl-IO-Tee \
+  perl-JSON \
+  perl-libwww-perl \
+  perl-Mail-IMAPClient \
+  perl-Module-Implementation \
+  perl-Module-Runtime \
+  perl-Net-DBus \
+  perl-Net-DNS \
+  perl-Net-SSLeay \
+  perl-Package-Stash \
+  perl-Readonly \
+  perl-Regexp-Common \
+  perl-Term-ReadKey
+
+bold "[4/6] Installing additional Perl modules via cpanminus … (may take time)"
+cpanm -n Unicode::String Sys::MemInfo JSON::WebToken JSON::WebToken::Crypt::RSA Test::Mock::Guard Test::Warn PAR::Packer Proc::ProcessTable
+
+bold "[5/6] Installing imapsync RPM from EPEL or building …"
+if yum -y install imapsync; then
+  bold "imapsync RPM installed."
+else
+  bold "imapsync RPM not found; installing via source …"
+  wget -q -O /usr/local/bin/imapsync https://raw.githubusercontent.com/imapsync/imapsync/master/imapsync
+  chmod +x /usr/local/bin/imapsync
+fi
+
+bold "[6/6] Verifying installation …"
+imapsync --version || true
+bold "Installation complete. Run 'imapsync --testslive' to verify."

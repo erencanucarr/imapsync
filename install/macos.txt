@@ -1,0 +1,2 @@
+# macOS imapsync installation
+brew install imapsync

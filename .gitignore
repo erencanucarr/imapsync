@@ -1,0 +1,19 @@
+# Go build outputs
+*.exe
+*.exe~
+imapen
+imaptr
+*.out
+*.tmp
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Dependency directories
+vendor/
+
+# Logs
+*.log
