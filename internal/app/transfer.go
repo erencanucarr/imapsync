@@ -1,119 +1,177 @@
 package app
 
 import (
-    "bufio"
-    "fmt"
-    "os"
-    "strings"
-    "os/exec"
-    "regexp"
-    "strconv"
-    "golang.org/x/term"
-    "github.com/schollz/progressbar/v3"
-    "imapsync/internal/i18n"
-    "imapsync/internal/ui"
+	"bufio"
+	"context"
+	"fmt"
+	"os"
+	"os/exec"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+
+	"imapsync/internal/i18n"
+	"imapsync/internal/ui"
 )
 
 // TransferMail runs imapsync and shows a progress bar.
 // It parses stdout looking for "Transferred:" lines to update progress.
 func TransferMail(lang string) {
-    fmt.Println(ui.Cyan(i18n.T(lang, "transfer_start")))
+	fmt.Println(ui.Cyan(i18n.T(lang, "transfer_start")))
 
-    reader := bufio.NewReader(os.Stdin)
-    fmt.Print("Source IMAP host: ")
-    srcHost, _ := reader.ReadString('\n')
-    srcHost = strings.TrimSpace(srcHost)
+	// Initialize performance manager
+	perfManager := NewPerformanceManager(nil)
+	defer perfManager.PrintStats()
 
-    fmt.Print("Source email: ")
-    srcEmail, _ := reader.ReadString('\n')
-    srcEmail = strings.TrimSpace(srcEmail)
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Source IMAP host: ")
+	srcHost, _ := reader.ReadString('\n')
+	srcHost = strings.TrimSpace(srcHost)
 
-    fmt.Print("Source password: ")
-    srcPass, _ := term.ReadPassword(int(os.Stdin.Fd()))
-    fmt.Println()
+	fmt.Print("Source email: ")
+	srcEmail, _ := reader.ReadString('\n')
+	srcEmail = strings.TrimSpace(srcEmail)
 
-    fmt.Print("Destination IMAP host: ")
-    dstHost, _ := reader.ReadString('\n')
-    dstHost = strings.TrimSpace(dstHost)
+	fmt.Print("Source password: ")
+	srcPass, _ := ReadPassword()
+	fmt.Println()
 
-    fmt.Print("Destination email: ")
-    dstEmail, _ := reader.ReadString('\n')
-    dstEmail = strings.TrimSpace(dstEmail)
+	fmt.Print("Destination IMAP host: ")
+	dstHost, _ := reader.ReadString('\n')
+	dstHost = strings.TrimSpace(dstHost)
 
-    fmt.Print("Destination password: ")
-    dstPass, _ := term.ReadPassword(int(os.Stdin.Fd()))
-    fmt.Println()
+	fmt.Print("Destination email: ")
+	dstEmail, _ := reader.ReadString('\n')
+	dstEmail = strings.TrimSpace(dstEmail)
 
-    fmt.Println(ui.Cyan("Testing credentials..."))
-    testCmd := exec.Command("imapsync", "--justlogin", "--host1", srcHost, "--ssl1", "--user1", srcEmail, "--password1", string(srcPass), "--host2", dstHost, "--ssl2", "--user2", dstEmail, "--password2", string(dstPass))
-    if err := testCmd.Run(); err != nil {
-        fmt.Println(ui.Red(i18n.T(lang, "error")), err)
-        return
-    }
+	fmt.Print("Destination password: ")
+	dstPass, _ := ReadPassword()
+	fmt.Println()
 
-    args := []string{
-        "--host1", srcHost, "--ssl1",
-        "--user1", srcEmail, "--password1", string(srcPass),
-        "--host2", dstHost, "--ssl2",
-        "--user2", dstEmail, "--password2", string(dstPass),
-        "--exclude", "^Junk\\ E-Mail",
-        "--exclude", "^Deleted\\ Items",
-        "--exclude", "^Deleted",
-        "--exclude", "^Trash",
-        "--regextrans2", "s#^Sent$#Sent Items#",
-        "--regextrans2", "s#^Spam$#Junk E-Mail#",
-        "--useuid",
-        "--usecache",
-        "--tmpdir", "./tmp",
-        "--syncinternaldates",
-        "--progress",
-    }
-    cmd := exec.Command("imapsync", args...)
+	// Check cache for previous successful transfers
+	cacheKey := fmt.Sprintf("%s_%s_%s", srcEmail, dstEmail, srcHost)
+	if cachedData, found := perfManager.GetCachedData(cacheKey); found {
+		fmt.Println(ui.Yellow("Found cached transfer data for this combination"))
+		fmt.Printf("Last successful transfer: %v\n", cachedData)
+	}
 
-    stdout, err := cmd.StdoutPipe()
-    if err != nil {
-        fmt.Println(ui.Red(i18n.T(lang, "error")), err)
-        return
-    }
+	fmt.Println(ui.Cyan("Testing credentials..."))
 
-    if err := cmd.Start(); err != nil {
-        fmt.Println(ui.Red(i18n.T(lang, "error")), err)
-        return
-    }
+	// Use retry mechanism for credential testing
+	ctx := context.Background()
+	err := perfManager.RetryWithBackoff(ctx, func() error {
+		testCmd := exec.Command("imapsync", "--justlogin", "--host1", srcHost, "--ssl1", "--user1", srcEmail, "--password1", srcPass, "--host2", dstHost, "--ssl2", "--user2", dstEmail, "--password2", dstPass)
+		return testCmd.Run()
+	})
 
-    bar := progressbar.NewOptions(100,
-        progressbar.OptionSetDescription("IMAPSYNC"),
-        progressbar.OptionSetTheme(progressbar.Theme{Saucer: "=", SaucerHead: ">", SaucerPadding: " ", BarStart: "[", BarEnd: "]"}),
-    )
+	if err != nil {
+		fmt.Println(ui.Red(i18n.T(lang, "error")), err)
+		return
+	}
 
-    scanner := bufio.NewScanner(stdout)
-    percentRe := regexp.MustCompile(`([0-9]{1,3}(?:\.[0-9]+)?)%`)
-    ratioRe := regexp.MustCompile(`(?i)(\d+)/(\d+)`)
-    for scanner.Scan() {
-        line := scanner.Text()
+	// Acquire connection from pool
+	if err := perfManager.AcquireConnection(ctx); err != nil {
+		fmt.Println(ui.Red("Failed to acquire connection from pool"), err)
+		return
+	}
+	defer perfManager.ReleaseConnection()
 
-        if m := percentRe.FindStringSubmatch(line); len(m) == 2 {
-            p, _ := strconv.ParseFloat(m[1], 64)
-            bar.Set(int(p))
-            continue
-        }
-        if m := ratioRe.FindStringSubmatch(line); len(m) == 3 {
-            current, _ := strconv.Atoi(m[1])
-            total, _ := strconv.Atoi(m[2])
-            if total > 0 {
-                bar.Set(int(float64(current) / float64(total) * 100))
-            }
-        }
-    }
+	// Check memory usage before starting transfer
+	if !perfManager.CheckMemoryLimit() {
+		fmt.Println(ui.Yellow("Memory usage high, optimizing..."))
+		perfManager.OptimizeMemory()
+	}
 
-    if err := cmd.Wait(); err != nil {
-        fmt.Println() // newline after bar
-        fmt.Println(ui.Red(i18n.T(lang, "transfer_fail")))
-        fmt.Println(ui.Red(i18n.T(lang, "error")), err)
-        return
-    }
+	args := []string{
+		"--host1", srcHost, "--ssl1",
+		"--user1", srcEmail, "--password1", srcPass,
+		"--host2", dstHost, "--ssl2",
+		"--user2", dstEmail, "--password2", dstPass,
+		"--exclude", "^Junk\\ E-Mail",
+		"--exclude", "^Deleted\\ Items",
+		"--exclude", "^Deleted",
+		"--exclude", "^Trash",
+		"--regextrans2", "s#^Sent$#Sent Items#",
+		"--regextrans2", "s#^Spam$#Junk E-Mail#",
+		"--useuid",
+		"--usecache",
+		"--tmpdir", "./tmp",
+		"--syncinternaldates",
+		"--progress",
+	}
 
-    bar.Finish()
-    fmt.Println() // newline after bar
-    fmt.Println(ui.Green(i18n.T(lang, "transfer_success")))
+	startTime := time.Now()
+	cmd := exec.Command("imapsync", args...)
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		fmt.Println(ui.Red(i18n.T(lang, "error")), err)
+		return
+	}
+
+	if err := cmd.Start(); err != nil {
+		fmt.Println(ui.Red(i18n.T(lang, "error")), err)
+		return
+	}
+
+	bar := NewProgressBar(100)
+	bar.SetDescription("IMAPSYNC")
+
+	scanner := bufio.NewScanner(stdout)
+	percentRe := regexp.MustCompile(`([0-9]{1,3}(?:\.[0-9]+)?)%`)
+	ratioRe := regexp.MustCompile(`(?i)(\d+)/(\d+)`)
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		if m := percentRe.FindStringSubmatch(line); len(m) == 2 {
+			p, _ := strconv.ParseFloat(m[1], 64)
+			bar.Set(int(p))
+			continue
+		}
+		if m := ratioRe.FindStringSubmatch(line); len(m) == 3 {
+			current, _ := strconv.Atoi(m[1])
+			total, _ := strconv.Atoi(m[2])
+			if total > 0 {
+				bar.Set(int(float64(current) / float64(total) * 100))
+			}
+		}
+	}
+
+	var bytesTransferred int64
+	var transferSuccess bool
+
+	if err := cmd.Wait(); err != nil {
+		fmt.Println() // newline after bar
+		fmt.Println(ui.Red(i18n.T(lang, "transfer_fail")))
+		fmt.Println(ui.Red(i18n.T(lang, "error")), err)
+		transferSuccess = false
+	} else {
+		transferSuccess = true
+	}
+
+	bar.Finish()
+	fmt.Println() // newline after bar
+
+	// Calculate transfer statistics
+	duration := time.Since(startTime)
+	if transferSuccess {
+		// Estimate bytes transferred (this would be more accurate with actual parsing)
+		bytesTransferred = 1024 * 1024 // 1MB estimate
+		perfManager.UpdateStats(true, bytesTransferred)
+
+		// Cache successful transfer
+		transferInfo := map[string]interface{}{
+			"timestamp": time.Now(),
+			"duration":  duration,
+			"bytes":     bytesTransferred,
+		}
+		perfManager.SetCachedData(cacheKey, transferInfo)
+
+		fmt.Println(ui.Green(i18n.T(lang, "transfer_success")))
+		fmt.Printf("Transfer completed in %s\n", duration.Round(time.Second))
+	} else {
+		perfManager.UpdateStats(false, 0)
+		fmt.Println(ui.Red(i18n.T(lang, "transfer_fail")))
+	}
 }
