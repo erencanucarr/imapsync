@@ -161,7 +161,7 @@ func (pm *PerformanceManager) RetryWithBackoff(ctx context.Context, operation fu
 			return nil
 		} else {
 			lastErr = err
-			pm.logger.Warnf("Attempt %d failed: %v", attempt+1, err)
+			pm.logger.Warn("Attempt %d failed: %v", attempt+1, err)
 
 			if attempt < pm.config.RetryAttempts-1 {
 				select {

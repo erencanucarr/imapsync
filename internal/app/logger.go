@@ -98,28 +98,3 @@ func (l *Logger) Fatal(format string, args ...interface{}) {
 	l.log(LevelFatal, format, args...)
 	os.Exit(1)
 }
-
-// Debugf logs a debug message (alias for Debug)
-func (l *Logger) Debugf(format string, args ...interface{}) {
-	l.Debug(format, args...)
-}
-
-// Infof logs an info message (alias for Info)
-func (l *Logger) Infof(format string, args ...interface{}) {
-	l.Info(format, args...)
-}
-
-// Warnf logs a warning message (alias for Warn)
-func (l *Logger) Warnf(format string, args ...interface{}) {
-	l.Warn(format, args...)
-}
-
-// Errorf logs an error message (alias for Error)
-func (l *Logger) Errorf(format string, args ...interface{}) {
-	l.Error(format, args...)
-}
-
-// Fatalf logs a fatal message and exits (alias for Fatal)
-func (l *Logger) Fatalf(format string, args ...interface{}) {
-	l.Fatal(format, args...)
-}

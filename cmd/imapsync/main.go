@@ -8,45 +8,55 @@ import (
 	"strings"
 
 	"imapsync/internal/app"
-	"imapsync/internal/i18n"
 	"imapsync/internal/ui"
 )
 
 func main() {
-	lang := flag.String("lang", "tr", "Language: tr or en")
+	// Default to TUI mode, but allow CLI mode with -cli flag
+	cliMode := flag.Bool("cli", false, "Enable CLI mode (default is TUI)")
 	flag.Parse()
 
+	if !*cliMode {
+		// Start TUI mode by default
+		app.StartSimpleInterface()
+		return
+	}
+
+	// Original CLI mode (only when -cli flag is used)
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
-		fmt.Println(ui.Cyan(i18n.T(*lang, "menu")))
-		fmt.Println(i18n.T(*lang, "menu_setup"))
-		fmt.Println(i18n.T(*lang, "menu_transfer"))
-		fmt.Println(i18n.T(*lang, "menu_parallel"))
-		fmt.Println(i18n.T(*lang, "menu_stats"))
-		fmt.Println(i18n.T(*lang, "menu_developer"))
-		fmt.Println(i18n.T(*lang, "menu_exit"))
+		fmt.Println(ui.Cyan("Please select an option:"))
+		fmt.Println("1 - Setup System")
+		fmt.Println("2 - Transfer Mail")
+		fmt.Println("3 - Parallel Transfer")
+		fmt.Println("4 - Performance Stats")
+		fmt.Println("5 - Developer")
+		fmt.Println("6 - Modern TUI Interface")
+		fmt.Println("7 - Exit")
 
-		fmt.Print(ui.Green(i18n.T(*lang, "choice")))
+		fmt.Print(ui.Green("Choice (1-7): "))
 		choice, _ := reader.ReadString('\n')
 		choice = strings.TrimSpace(choice)
 
 		switch choice {
 		case "1":
-			app.SetupSystem(*lang)
+			app.SetupSystem()
 		case "2":
-			app.TransferMail(*lang)
+			app.TransferMail()
 		case "3":
-			app.ParallelTransfer(*lang)
+			app.ParallelTransfer()
 		case "4":
-			app.ShowPerformanceStats(*lang)
+			app.ShowPerformanceStats()
 		case "5":
-			app.ShowDeveloper(*lang)
+			app.ShowDeveloper()
 		case "6":
-			fmt.Println(ui.Yellow(i18n.T(*lang, "exit")))
+			app.StartSimpleInterface()
+		case "7":
+			fmt.Println(ui.Yellow("Exiting program..."))
 			return
 		default:
-			fmt.Println(ui.Red(i18n.T(*lang, "invalid")))
+			fmt.Println(ui.Red("Invalid choice. Please enter 1-7."))
 		}
 	}
 }

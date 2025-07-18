@@ -11,14 +11,13 @@ import (
 	"strings"
 	"time"
 
-	"imapsync/internal/i18n"
 	"imapsync/internal/ui"
 )
 
 // TransferMail runs imapsync and shows a progress bar.
 // It parses stdout looking for "Transferred:" lines to update progress.
-func TransferMail(lang string) {
-	fmt.Println(ui.Cyan(i18n.T(lang, "transfer_start")))
+func TransferMail() {
+	fmt.Println(ui.Cyan("Starting mail transfer..."))
 
 	// Initialize performance manager
 	perfManager := NewPerformanceManager(nil)
@@ -66,7 +65,7 @@ func TransferMail(lang string) {
 	})
 
 	if err != nil {
-		fmt.Println(ui.Red(i18n.T(lang, "error")), err)
+		fmt.Println(ui.Red("Error:"), err)
 		return
 	}
 
@@ -106,12 +105,12 @@ func TransferMail(lang string) {
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		fmt.Println(ui.Red(i18n.T(lang, "error")), err)
+		fmt.Println(ui.Red("Error:"), err)
 		return
 	}
 
 	if err := cmd.Start(); err != nil {
-		fmt.Println(ui.Red(i18n.T(lang, "error")), err)
+		fmt.Println(ui.Red("Error:"), err)
 		return
 	}
 
@@ -143,8 +142,8 @@ func TransferMail(lang string) {
 
 	if err := cmd.Wait(); err != nil {
 		fmt.Println() // newline after bar
-		fmt.Println(ui.Red(i18n.T(lang, "transfer_fail")))
-		fmt.Println(ui.Red(i18n.T(lang, "error")), err)
+		fmt.Println(ui.Red("Mail transfer failed."))
+		fmt.Println(ui.Red("Error:"), err)
 		transferSuccess = false
 	} else {
 		transferSuccess = true
@@ -168,10 +167,10 @@ func TransferMail(lang string) {
 		}
 		perfManager.SetCachedData(cacheKey, transferInfo)
 
-		fmt.Println(ui.Green(i18n.T(lang, "transfer_success")))
+		fmt.Println(ui.Green("Mail transfer completed successfully!"))
 		fmt.Printf("Transfer completed in %s\n", duration.Round(time.Second))
 	} else {
 		perfManager.UpdateStats(false, 0)
-		fmt.Println(ui.Red(i18n.T(lang, "transfer_fail")))
+		fmt.Println(ui.Red("Mail transfer failed."))
 	}
 }

@@ -3,36 +3,23 @@
 ![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Platform](https://img.shields.io/badge/Platforms-Linux%20%7C%20macOS%20%7C%20Windows-blue)
+![Zero Dependency](https://img.shields.io/badge/Zero%20Dependency-100%25%20Go%20StdLib-brightgreen)
 
-> A user-friendly, multi-language wrapper around [imapsync](https://imapsync.lamiral.info/) that makes mailbox migrations **safe, observable and cross-platform**.
-
----
-
-## ✨ Key Highlights
-
-| Category | Details |
-|----------|---------|
-| Interactivity | Guided CLI menus in English, Turkish, Spanish, German (extendable) |
-| Security | Passwords collected with hidden input (`golang.org/x/term`) |
-| Portability | Pre-built install scripts for Ubuntu, Debian, CentOS/RHEL, Arch, macOS |
-| Observability | Realtime progress bar (`schollz/progressbar`) parses imapsync output |
-| Extensibility | Modular Go code-base, JSON i18n, clean folder layout |
+> A **zero-dependency** IMAP mailbox synchronization tool with modern Terminal User Interface (TUI). Built entirely with Go standard library - no external dependencies!
 
 ---
 
-## 📂 Repository Layout
+## ✨ Key Features
 
-```
-├── cmd/               # CLI entry point
-│   └── imapsync/      # main.go
-├── internal/
-│   ├── app/           # business logic (setup, transfer, developer info)
-│   ├── i18n/          # locale loader + JSON files (en, tr, es, de)
-│   └── ui/            # colour helpers
-├── install/           # OS-specific imapsync install scripts
-├── README.md          # (EN) you are here
-└── readmetr.md        # (TR) Türkçe sürüm
-```
+| Feature | Description |
+|---------|-------------|
+| 🎯 **Zero Dependencies** | Built entirely with Go standard library - no external packages |
+| 🖥️ **Modern TUI** | Beautiful terminal interface with colors, progress bars, and real-time stats |
+| 🔄 **Parallel Transfers** | Sync multiple mailboxes simultaneously with configurable concurrency |
+| 📊 **Real-time Monitoring** | Live progress tracking, performance metrics, and transfer statistics |
+| 🛡️ **Safe & Reliable** | Uses `--useuid` for idempotent transfers, resume interrupted syncs |
+| 🚀 **Auto Setup** | Automatic imapsync installation for multiple Linux distributions |
+| 📝 **Comprehensive Logging** | Detailed logs with history and performance tracking |
 
 ---
 
@@ -44,102 +31,232 @@
 git clone https://github.com/yourname/imapsync-cli.git
 cd imapsync-cli
 
+# Build the application
 go build -o imapsync ./cmd/imapsync
-./imapsync -lang=en   # use -lang=<code> to switch language
+
+# Run with modern TUI (default)
+./imapsync
+
+# Or run in CLI mode
+./imapsync -cli
 ```
 
-### 2. Initial Setup
+### 2. First Time Setup
 
-Choose **1) System Setup** in the menu. If Python / imapsync are missing you will see:
+The application will automatically start in TUI mode. Choose **1) System Setup** to install required dependencies:
+
+```
+┌─ IMAPSYNC CLI ──────────────────────────────────────────────┐
+│                                                             │
+│  🔧 1) System Setup                                         │
+│  📧 2) Transfer Mail                                        │
+│  📊 3) View Statistics                                      │
+│  📝 4) View Logs/History                                    │
+│  ℹ️  5) Developer Info                                      │
+│  ❌ 6) Exit                                                  │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+If Python or imapsync are missing, the setup will offer automatic installation:
 
 ```
 Python ✗
 imapsync ✗
-Local install scripts available in ./install directory:
+Local install scripts available:
  - ubuntu  - debian  - centos  - arch  - darwin
 Enter distribution key to run installer or press Enter to skip:
 ```
 
-Type your distribution keyword to run the automated installer **with sudo/root**. Logs are written to `/var/log/imapsync-install.log`.
+### 3. Transfer Emails
 
-### 3. Transfer E-mails
-
-1. Pick **2) Transfer Mail**.
-2. Enter source & destination hosts / e-mails / passwords (hidden).
-3. Tool validates credentials with `imapsync --justlogin` then starts migration.
-4. Watch the progress bar – you can safely cancel with `Ctrl+C` and rerun (thanks to `--useuid`).
+1. Select **2) Transfer Mail** from the main menu
+2. Enter source and destination server details:
+   - Host addresses
+   - Email accounts
+   - Passwords (hidden input)
+3. The tool validates credentials with `imapsync --justlogin`
+4. Watch real-time progress with beautiful progress bars
+5. Cancel safely with `Ctrl+C` - transfers are resumable
 
 ---
 
-## ⚙️ Recommended imapsync Flags
+## 🎯 Zero Dependency Architecture
 
-The wrapper launches imapsync with defaults proven in production:
+This project replaces all external libraries with custom implementations:
+
+| External Library | Our Implementation | Features |
+|------------------|-------------------|----------|
+| `github.com/schollz/progressbar` | `internal/app/progressbar.go` | Real-time progress bars with ETA |
+| `github.com/patrickmn/go-cache` | `internal/app/cache.go` | Thread-safe cache with expiration |
+| `github.com/sirupsen/logrus` | `internal/app/logger.go` | Structured logging with levels |
+| `golang.org/x/sync/semaphore` | `internal/app/semaphore.go` | Concurrency control |
+| `golang.org/x/term` | `internal/app/term.go` | Cross-platform terminal handling |
+
+### Benefits:
+- **No external dependencies** - 100% Go standard library
+- **Full control** over all code and behavior
+- **Better performance** with minimal overhead
+- **Enhanced security** - no third-party code execution
+- **Easy customization** - modify any component as needed
+
+---
+
+## 📂 Project Structure
 
 ```
+imapsync/
+├── cmd/
+│   └── imapsync/
+│       └── main.go              # Application entry point
+├── internal/
+│   ├── app/
+│   │   ├── cache.go             # Custom cache implementation
+│   │   ├── developer.go         # Developer information
+│   │   ├── logger.go            # Custom logging system
+│   │   ├── parallel.go          # Parallel transfer management
+│   │   ├── performance.go       # Performance metrics
+│   │   ├── progressbar.go       # Custom progress bars
+│   │   ├── semaphore.go         # Concurrency control
+│   │   ├── setup.go             # System setup logic
+│   │   ├── simple_interface.go  # TUI application logic
+│   │   ├── term.go              # Terminal input handling
+│   │   └── transfer.go          # Mail transfer logic
+│   └── ui/
+│       └── console.go           # Color and UI helpers
+├── install/                     # OS-specific install scripts
+│   ├── ubuntu.txt
+│   ├── debian.txt
+│   ├── centos.txt
+│   ├── archlinux.txt
+│   └── darwin.txt
+└── README.md                    # This file
+```
+
+---
+
+## 🖥️ Terminal User Interface
+
+The modern TUI provides an intuitive experience:
+
+### Main Menu
+- Clean, colorized interface
+- Easy navigation with number keys
+- Real-time status indicators
+
+### Transfer Interface
+- Live progress bars with ETA
+- Transfer statistics (speed, success rate)
+- Memory usage monitoring
+- Cache performance metrics
+
+### Logs & History
+- View detailed transfer logs
+- Performance history
+- Error tracking and debugging
+
+---
+
+## ⚙️ Recommended imapsync Configuration
+
+The wrapper uses production-tested defaults:
+
+```bash
 --ssl1 --ssl2 \
 --exclude "^Junk E-Mail" --exclude "^Trash" --exclude "^Deleted( Items)?$" \
 --regextrans2 's#^Sent$#Sent Items#' --regextrans2 's#^Spam$#Junk E-Mail#' \
 --useuid --usecache --tmpdir ./tmp --syncinternaldates --progress
 ```
-You can modify flags inside `internal/app/transfer.go`.
+
+You can modify these flags in `internal/app/transfer.go`.
 
 ---
 
-## 🖥️ Installing imapsync Manually
+## 🔧 Development
 
-If you prefer your own package manager, refer to `install/` scripts or the official docs:
-<https://imapsync.lamiral.info/INSTALL.d/>.
+### Building
 
----
+```bash
+# Build for current platform
+go build -o imapsync ./cmd/imapsync
 
-## 🛠️ Development
+# Build for multiple platforms
+GOOS=linux GOARCH=amd64 go build -o imapsync-linux ./cmd/imapsync
+GOOS=darwin GOARCH=amd64 go build -o imapsync-macos ./cmd/imapsync
+GOOS=windows GOARCH=amd64 go build -o imapsync-windows.exe ./cmd/imapsync
+```
+
+### Testing
 
 ```bash
 go vet ./...
 go test ./...
 ```
 
-Run with `go run ./cmd/imapsync -lang=en` for rapid iterations.
+### Running in Development
 
-### Adding a New Locale
+```bash
+# Run with TUI (default)
+go run ./cmd/imapsync
 
-1. Copy `internal/i18n/locales/en.json` ⇒ `internal/i18n/locales/fr.json` (example).
-2. Translate the values.
-3. Build & run with `-lang=fr`.
-
-### Extending Install Scripts
-
-Add `<distro>.txt` inside `install/` and reference the key in `internal/app/setup.go → scripts` map.
+# Run in CLI mode
+go run ./cmd/imapsync -cli
+```
 
 ---
 
-## 🙋‍♀️ FAQ
+## 🚀 Performance Features
 
-* **Does this store my passwords?**  No. They are passed directly to `imapsync` as process args.
-* **Can I resume interrupted sync?**  Yes – `--useuid` makes runs idempotent.
-* **GUI?**  Planned in roadmap – PRs welcome!
+### Parallel Processing
+- **Connection Pooling**: Semaphore-based concurrency control
+- **Cache System**: Successful transfers are cached
+- **Memory Management**: Automatic memory optimization
+- **Progress Tracking**: Real-time performance metrics
+
+### Statistics & Monitoring
+- Transfer success rates
+- Average speed calculations
+- Memory usage tracking
+- Cache performance metrics
+- Real-time progress updates
 
 ---
 
-## 🤝 Contributing
+## 🛠️ System Requirements
 
-1. Fork & branch.
-2. Follow Go conventions (`go vet`, `golint`).
-3. Submit a PR; CI will run `go test`.
-
-All contributions, translations and bug reports are appreciated.
-
----
-
-## 📅 Roadmap
-
-- [ ] Config file / profile saving
-- [ ] OAuth2 support (Gmail, Outlook 365)
-- [ ] TUI with BubbleTea
-- [ ] Build pipeline & release binaries
+- **Go**: 1.21 or higher
+- **Python**: 3.6+ (for imapsync)
+- **imapsync**: Will be installed automatically
+- **Platforms**: Linux, macOS, Windows
 
 ---
 
 ## 📝 License
 
-MIT © 2025 Your Name
+MIT © 2025 - Zero Dependency IMAPSYNC CLI
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Follow Go conventions (`go vet`, `golint`)
+4. Submit a pull request
+
+All contributions are welcome!
+
+---
+
+## 🎯 Roadmap
+
+- [x] Zero dependency architecture
+- [x] Modern TUI interface
+- [x] Parallel transfer support
+- [x] Real-time statistics
+- [x] Comprehensive logging
+- [ ] OAuth2 support (Gmail, Outlook 365)
+- [ ] Configuration file support
+- [ ] Web dashboard
+- [ ] Advanced filtering options
+- [ ] Backup and restore features 
