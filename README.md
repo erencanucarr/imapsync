@@ -28,7 +28,7 @@
 ### 1. Build & Run
 
 ```bash
-git clone https://github.com/yourname/imapsync-cli.git
+git clone https://github.com/erencanucarr/imapsync-cli.git
 cd imapsync-cli
 
 # Build the application
